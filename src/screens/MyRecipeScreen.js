@@ -31,42 +31,47 @@ export default function MyRecipeScreen() {
   const [recipes, setrecipes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Завантаження рецептів з AsyncStorage
-  const fetchrecipes = async () => {
+  // Завантаження рецептів із AsyncStorage
+  const fetchrecipes = useCallback(async () => {
     try {
+      setLoading(true);
+
       const storedRecipes = await AsyncStorage.getItem(
         "customrecipes"
       );
 
-      const parsedRecipes = storedRecipes
-        ? JSON.parse(storedRecipes)
-        : [];
+      if (storedRecipes) {
+        const parsedRecipes = JSON.parse(storedRecipes);
 
-      setrecipes(
-        Array.isArray(parsedRecipes) ? parsedRecipes : []
-      );
+        setrecipes(
+          Array.isArray(parsedRecipes)
+            ? parsedRecipes
+            : []
+        );
+      } else {
+        setrecipes([]);
+      }
     } catch (error) {
       console.error("Error fetching recipes:", error);
       setrecipes([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Оновлення списку при кожному відкритті екрана
+  // Оновлення рецептів при поверненні на My Food
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
       fetchrecipes();
-    }, [])
+    }, [fetchrecipes])
   );
 
-  // Створення нового рецепта
+  // Перехід до створення нового рецепта
   const handleAddrecipe = () => {
     navigation.navigate("RecipesFormScreen");
   };
 
-  // Перегляд власного рецепта
+  // Перехід до деталей рецепта
   const handlerecipeClick = (recipe) => {
     navigation.navigate("CustomRecipesScreen", {
       recipe,
@@ -76,30 +81,16 @@ export default function MyRecipeScreen() {
   // Видалення рецепта
   const deleterecipe = async (index) => {
     try {
-      const storedRecipes = await AsyncStorage.getItem(
-        "customrecipes"
-      );
+      const updatedrecipes = [...recipes];
 
-      const currentRecipes = storedRecipes
-        ? JSON.parse(storedRecipes)
-        : [];
-
-      if (
-        !Array.isArray(currentRecipes) ||
-        index < 0 ||
-        index >= currentRecipes.length
-      ) {
-        throw new Error("Invalid recipe index");
-      }
-
-      currentRecipes.splice(index, 1);
+      updatedrecipes.splice(index, 1);
 
       await AsyncStorage.setItem(
         "customrecipes",
-        JSON.stringify(currentRecipes)
+        JSON.stringify(updatedrecipes)
       );
 
-      setrecipes(currentRecipes);
+      setrecipes(updatedrecipes);
     } catch (error) {
       console.error("Error deleting recipe:", error);
 
@@ -117,7 +108,11 @@ export default function MyRecipeScreen() {
   // Підтвердження видалення
   const confirmDelete = (index) => {
     if (Platform.OS === "web") {
-      if (window.confirm("Delete this recipe?")) {
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this recipe?"
+      );
+
+      if (confirmed) {
         deleterecipe(index);
       }
     } else {
@@ -139,7 +134,7 @@ export default function MyRecipeScreen() {
     }
   };
 
-  // Редагування рецепта
+  // Перехід до редагування рецепта
   const editrecipe = (recipe, index) => {
     navigation.navigate("RecipesFormScreen", {
       recipeToEdit: recipe,
@@ -153,6 +148,7 @@ export default function MyRecipeScreen() {
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={styles.backButton}
+        testID="backButton"
       >
         <Text style={styles.backButtonText}>
           ← Back
@@ -168,7 +164,7 @@ export default function MyRecipeScreen() {
         Create and manage your own recipes
       </Text>
 
-      {/* Кнопка додавання */}
+      {/* Додавання нового рецепта */}
       <TouchableOpacity
         onPress={handleAddrecipe}
         style={styles.addButton}
@@ -186,6 +182,7 @@ export default function MyRecipeScreen() {
             size="large"
             color="#F59E0B"
           />
+
           <Text style={styles.loadingText}>
             Loading recipes...
           </Text>
@@ -206,8 +203,8 @@ export default function MyRecipeScreen() {
               </Text>
 
               <Text style={styles.emptyDescription}>
-                Tap Add New Recipe to create
-                your first recipe.
+                Create your first recipe using
+                the button above.
               </Text>
             </View>
           ) : (
@@ -224,7 +221,7 @@ export default function MyRecipeScreen() {
                     handlerecipeClick(recipe)
                   }
                 >
-                  {/* Фотографія */}
+                  {/* Зображення рецепта */}
                   {recipe.image ? (
                     <Image
                       source={{ uri: recipe.image }}
@@ -234,27 +231,29 @@ export default function MyRecipeScreen() {
                   ) : (
                     <View style={styles.imagePlaceholder}>
                       <Text style={styles.placeholderText}>
-                        🍲 No Image
+                        🍲 No Image Available
                       </Text>
                     </View>
                   )}
 
-                  {/* Назва */}
+                  {/* Назва рецепта */}
                   <Text style={styles.recipeTitle}>
                     {recipe.title}
                   </Text>
 
-                  {/* Опис */}
+                  {/* Перші 50 символів опису */}
                   <Text
                     style={styles.recipeDescription}
                     testID="recipeDescp"
-                    numberOfLines={3}
                   >
-                    {recipe.description}
+                    {recipe.description
+                      ? recipe.description.slice(0, 50) +
+                        "..."
+                      : ""}
                   </Text>
                 </TouchableOpacity>
 
-                {/* Редагування та видалення */}
+                {/* Кнопки редагування та видалення */}
                 <View
                   style={styles.actionButtonsContainer}
                   testID="editDeleteButtons"
@@ -300,7 +299,7 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    marginBottom: hp(2),
+    marginBottom: hp(1.5),
     alignSelf: "flex-start",
   },
 
