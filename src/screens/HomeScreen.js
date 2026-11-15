@@ -1,15 +1,25 @@
 
-import { View, Text, ScrollView, Image, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import React, { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+import { useNavigation } from "@react-navigation/native";
 import Categories from "../components/categories";
 import Recipes from "../components/recipes";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+
   const [activeCategory, setActiveCategory] = useState("Chicken");
 
   // Hardcoded categories for news
@@ -736,6 +746,16 @@ export default function HomeScreen() {
         />
         </View>
 
+        <TouchableOpacity
+        style={styles.favoritesButton}
+        onPress={() => navigation.navigate("FavoriteScreen")}
+        testID="myFavoritesButton"
+        >
+        <Text style={styles.favoritesButtonText}>
+            ❤️ My Favorites
+        </Text>
+        </TouchableOpacity>
+
         <View testID="foodList">
         <Recipes
             foods={filteredfoods}
@@ -794,5 +814,19 @@ const styles = StyleSheet.create({
   },
   highlight: {
     color: "#F59E0B", // amber-400
+  },
+  favoritesButton: {
+  backgroundColor: "#FACC15",
+  marginHorizontal: 16,
+  marginVertical: 16,
+  paddingVertical: 14,
+  borderRadius: 12,
+  alignItems: "center",
+  },
+
+  favoritesButtonText: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#334155",
   },
 });
